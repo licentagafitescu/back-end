@@ -5,14 +5,13 @@ from flask_cors import CORS
 import requests
 from authlib.flask.client import OAuth
 from flask import Flask, redirect, session, jsonify, request
-
+import os
 import repository
 # import prediction
 import time
 
 print("Aaaaaa")
 app = Flask(__name__)
-app.config.from_pyfile("app.cfg")
 CORS(app)
 oauth = OAuth(app)
 
@@ -33,15 +32,15 @@ def fetch_flickr_token():
 
 oauth.register(
     name='flickr',
-    client_id=app.config['FLICKR_CLIENT_ID'],
-    client_secret=app.config['FLICKR_CLIENT_SECRET'],
-    request_token_url=app.config['FLICKR_REQUEST_TOKEN_URL'],
-    request_token_params=app.config['FLICKR_REQUEST_TOKEN_PARAMS'],
-    access_token_url=app.config['FLICKR_ACCESS_TOKEN_URL'],
-    access_token_params=app.config['FLICKR_ACCESS_TOKEN_PARAMS'],
-    authorize_url=app.config['FLICKR_AUTHORIZE_URL'],
-    api_base_url=app.config['FLICKR_API_BASE_URL'],
-    client_kwargs=app.config['FLICKR_CLIENT_KWARGS'],
+    client_id=os.environ['FLICKR_CLIENT_ID'],
+    client_secret=os.environ['FLICKR_CLIENT_SECRET'],
+    request_token_url=os.environ['FLICKR_REQUEST_TOKEN_URL'],
+    request_token_params=os.environ['FLICKR_REQUEST_TOKEN_PARAMS'],
+    access_token_url=os.environ['FLICKR_ACCESS_TOKEN_URL'],
+    access_token_params=os.environ['FLICKR_ACCESS_TOKEN_PARAMS'],
+    authorize_url=os.environ['FLICKR_AUTHORIZE_URL'],
+    api_base_url=os.environ['FLICKR_API_BASE_URL'],
+    client_kwargs=os.environ['FLICKR_CLIENT_KWARGS'],
     save_request_token=save_request_token,
     fetch_request_token=fetch_request_token,
     fetch_token=fetch_flickr_token,
@@ -140,19 +139,19 @@ def flickr_profile():
 
 
 def get_profile():
-    request_url = app.config["FLICKR_API_BASE_URL"] + "rest?"
+    request_url = os.environ["FLICKR_API_BASE_URL"] + "rest?"
     parameters = dict()
     parameters["method"] = "flickr.people.getInfo"
     parameters["nojsoncallback"] = 1
     parameters["format"] = "json"
-    parameters["api_key"] = app.config["FLICKR_CLIENT_ID"]
+    parameters["api_key"] = os.environ["FLICKR_CLIENT_ID"]
     parameters["user_id"] = repository.get_token_by_id(session["current_user"]).get("user_nsid", "")
     resp = requests.get(request_url, parameters)
     return resp.json()
 
 
 def get_contacts():
-    api_key = app.config["FLICKR_CLIENT_ID"]
+    api_key = os.environ["FLICKR_CLIENT_ID"]
     method = "flickr.contacts.getList"
     response_format = "json"
     request_url = "rest?method={}&api_key={}&format={}&nojsoncallback={}".format(method, api_key, response_format, 1)
@@ -164,7 +163,7 @@ def get_contacts():
 
 
 def get_photos_of_contact(contact):
-    api_key = app.config["FLICKR_CLIENT_ID"]
+    api_key = os.environ["FLICKR_CLIENT_ID"]
     method = "flickr.people.getPhotos"
     response_format = "json"
     request_url = "rest?method={}&api_key={}&user_id={}&format={}&nojsoncallback={}".format(method, api_key, contact,
@@ -177,7 +176,7 @@ def get_photos_of_contact(contact):
 
 
 def search_photos(mode, text):
-    api_key = app.config["FLICKR_CLIENT_ID"]
+    api_key = os.environ["FLICKR_CLIENT_ID"]
     method = "flickr.photos.search"
     media = "photos"
     sort = "relevance"
