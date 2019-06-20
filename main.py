@@ -12,6 +12,7 @@ import time
 
 
 app = Flask(__name__)
+app.secret_key = os.environ["SECRET_KEY"]
 CORS(app)
 oauth = OAuth(app)
 
@@ -103,7 +104,7 @@ def login():
     user_id = uuid.uuid4()
     user_id = str(user_id)
     session["current_user"] = user_id
-    redirect_uri = "http://flickrclonefetch.herokuapp.com//authorize"
+    redirect_uri = "http://flickrclonefetch.herokuapp.com/authorize"
     return oauth.flickr.authorize_redirect(redirect_uri)
 
 
