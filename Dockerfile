@@ -6,9 +6,8 @@ RUN apt-get update --fix-missing
 RUN apt-get install -y build-essential git
 RUN apt-get install -y python3 python-dev python-setuptools
 RUN apt-get install -y python3-pip python-virtualenv
-RUN apt-get install -y nginx supervisor
+RUN apt-get install -y nginx 
 
-RUN service supervisor stop
 
 # create virtual env and install dependencies
 # Due to a bug with h5 we install Cython first
@@ -19,10 +18,8 @@ RUN /opt/venv/bin/pip install Cython && /opt/venv/bin/pip install -r /opt/venv/r
 # expose port
 EXPOSE 80
 
-RUN pip3 install supervisor-stdout
 
 # Add our config files
-ADD ./supervisord.conf /etc/supervisord.conf
 ADD ./nginx.conf /etc/nginx/nginx.conf
 
 # Copy our service code
@@ -32,4 +29,4 @@ ADD ./service /opt/app
 RUN service nginx stop
 
 # start supervisor to run our wsgi server
-CMD supervisord -c /etc/supervisord.conf -n
+CMD  /opt/venv/bin/gunicorn main:app -w 2 -b 0.0.0.0:5000 --log-level=debug --chdir=/opt/app 

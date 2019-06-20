@@ -1,5 +1,5 @@
 from pony.orm import *
-import service.models as models
+import models as models
 
 
 @db_session

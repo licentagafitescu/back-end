@@ -6,10 +6,11 @@ import requests
 from authlib.flask.client import OAuth
 from flask import Flask, redirect, session, jsonify, request
 
-import service.repository as repository
-import service.prediction as prediction
+import repository
+# import prediction
 import time
 
+print("Aaaaaa")
 app = Flask(__name__)
 app.config.from_pyfile("app.cfg")
 CORS(app)
