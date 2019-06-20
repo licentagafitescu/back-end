@@ -12,7 +12,7 @@ import time
 
 
 app = Flask(__name__)
-app.secret_key = app.cfg["SECRET_KEY"]
+app.secret_key = os.environ["SECRET_KEY"]
 CORS(app)
 oauth = OAuth(app)
 
