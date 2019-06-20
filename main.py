@@ -104,7 +104,7 @@ def login():
     user_id = uuid.uuid4()
     user_id = str(user_id)
     session["current_user"] = user_id
-    redirect_uri = "https://flickrclonefetch.herokuapp.com/lauthorize"
+    redirect_uri = "http://localhost:5000/authorize"
     return oauth.flickr.authorize_redirect(redirect_uri=redirect_uri)
 
 
