@@ -12,7 +12,7 @@ import time
 
 
 app = Flask(__name__)
-app.secret_key = os.environ["SECRET_KEY"]
+app.secret_key = app.cfg["SECRET_KEY"]
 CORS(app)
 oauth = OAuth(app)
 
@@ -105,7 +105,8 @@ def login():
     user_id = str(user_id)
     session["current_user"] = user_id
     redirect_uri = "http://localhost:5000/authorize"
-    return oauth.flickr.authorize_redirect(redirect_uri=redirect_uri)
+    kwargs = {}
+    return oauth.flickr.authorize_redirect(redirect_uri=redirect_uri,**kwargs)
 
 
 @app.route('/authorize')
