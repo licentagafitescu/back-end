@@ -5,8 +5,6 @@ RUN apt-get update --fix-missing
 # Install virtualenv, nginx, supervisor
 RUN apt-get install -y build-essential git
 RUN apt-get install -y python3 python-dev python-setuptools
-RUN apt-get install -y python 
-RUN apt-get install -y python-pip
 RUN apt-get install -y python3-pip python-virtualenv
 RUN apt-get install -y nginx supervisor
 

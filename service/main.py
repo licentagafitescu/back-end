@@ -6,8 +6,8 @@ import requests
 from authlib.flask.client import OAuth
 from flask import Flask, redirect, session, jsonify, request
 
-import repository
-import prediction
+import service.repository as repository
+import service.prediction as prediction
 import time
 
 app = Flask(__name__)
@@ -251,4 +251,4 @@ def similar_images(current_image, image_list):
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the
     # application on Google App Engine. See entrypoint in app.yaml.
-     app.run(host='0.0.0.0', port=80)
+     app.run(host='127.0.0.1', port=5000)
