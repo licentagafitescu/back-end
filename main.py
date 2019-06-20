@@ -1,7 +1,7 @@
 import json
 import uuid
 import base64
-
+from flask_cors import CORS
 import requests
 from authlib.flask.client import OAuth
 from flask import Flask, redirect, session, jsonify, request
@@ -12,6 +12,7 @@ import time
 
 app = Flask(__name__)
 app.config.from_pyfile("app.cfg")
+CORS(app)
 oauth = OAuth(app)
 
 
@@ -48,7 +49,6 @@ oauth.register(
 
 @app.route("/")
 def hello():
-    search_photos("contacts", "cat")
     return "A"
 
 
@@ -59,7 +59,7 @@ def addImage():
     name = request.json['name']
     payload = request.json['file']
     option = request.json['option']
-    originalImage = base64.b64decode(payload)
+    originalImage = payload
     current_image = prediction.predict(originalImage)
     current_image = [x[1] for x in current_image if x[2] > 0.2]
     t = time.time()
@@ -111,7 +111,7 @@ def login():
 def authorize():
     token = oauth.flickr.authorize_access_token()
     repository.add_token(session.get("current_user", ""), token)
-    redirect_url = "http://localhost:4200/login/"
+    redirect_url = "http://localhost:4200/#/login/"
     redirect_url = redirect_url + session.get("current_user", "")
     return redirect(redirect_url)
 
@@ -231,12 +231,14 @@ def photo_to_url(photo):
 def get_labels(image):
     response = requests.get(image)
     response = response.content
+    response = base64.b64encode(response).decode()
     labels = prediction.predict(response)
     labels = [x[1] for x in labels if x[2] > 0.2]
     return (image, labels)
 
 
 def similar_images(current_image, image_list):
+    print(current_image)
     similar_images = set()
     for image, labels in image_list:
         print(labels)
@@ -246,5 +248,7 @@ def similar_images(current_image, image_list):
     return list(similar_images)
 
 
-if __name__ == "__main__":
-    app.run(debug=True)
+if __name__ == '__main__':
+    # This is used when running locally. Gunicorn is used to run the
+    # application on Google App Engine. See entrypoint in app.yaml.
+    app.run(host='127.0.0.1', port=8090, debug=True)

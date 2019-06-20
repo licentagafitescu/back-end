@@ -2,6 +2,7 @@ import time
 from io import BytesIO
 
 import numpy as np
+import base64
 import tensorflow as tf
 from keras.applications.nasnet import NASNetMobile
 from keras.applications.nasnet import preprocess_input, decode_predictions
@@ -13,6 +14,7 @@ graph = tf.get_default_graph()
 
 
 def predict(image_response):
+    image_response = base64.b64decode(image_response)
     t = time.time()
     img = image.load_img(BytesIO(image_response), target_size=(224, 224))
     x = image.img_to_array(img)
