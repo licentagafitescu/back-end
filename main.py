@@ -7,10 +7,10 @@ from authlib.flask.client import OAuth
 from flask import Flask, redirect, session, jsonify, request
 import os
 import repository
-# import prediction
+import prediction
 import time
 
-print("Aaaaaa")
+
 app = Flask(__name__)
 CORS(app)
 oauth = OAuth(app)
@@ -103,7 +103,7 @@ def login():
     user_id = uuid.uuid4()
     user_id = str(user_id)
     session["current_user"] = user_id
-    redirect_uri = "http://localhost:5000/authorize"
+    redirect_uri = "http://flickrclonefetch.herokuapp.com//authorize"
     return oauth.flickr.authorize_redirect(redirect_uri)
 
 
