@@ -3,35 +3,9 @@ import models as models
 
 
 @db_session
-def add_request_token(user_id, request_token):
-    oauth_token = request_token.get("oauth_token", "")
-    oauth_token_secret = request_token.get("oauth_token_secret", "")
-    token = models.RequestToken(user_id=user_id, oauth_token=oauth_token,
-                                oauth_token_secret=oauth_token_secret)
-    try:
-        commit()
-        return token.user_id
-    except TransactionIntegrityError:
-        return -1
-
-
-@db_session
-def get_request_token(user_id):
-    try:
-        token = dict()
-        request_token = models.RequestToken[user_id]
-        token["oauth_callback_confirmed"] = "true"
-        token["oauth_token"] = request_token.oauth_token
-        token["oauth_token_secret"] = request_token.oauth_token_secret
-    except ObjectNotFound:
-        token = None
-    return token
-
-
-@db_session
 def add_token(user_id, token):
     try:
-        token_db = models.User[token.get("user_nsid","")]
+        token_db = models.User[token.get("user_nsid", "")]
         token_db.user_id = user_id
         token_db.oauth_token = token.get("oauth_token", "")
         token_db.oauth_token_secret = token.get("oauth_token_secret", "")

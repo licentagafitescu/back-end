@@ -5,24 +5,26 @@ from flask_cors import CORS
 import requests
 from authlib.flask.client import OAuth
 from flask import Flask, redirect, session, jsonify, request
-import os
+from werkzeug.contrib.cache import SimpleCache
+
 import repository
 import prediction
 import time
 
-
 app = Flask(__name__)
-app.secret_key = os.environ["SECRET_KEY"]
+app.config.from_pyfile("app.cfg")
 CORS(app)
 oauth = OAuth(app)
+cache = SimpleCache()
 
 
 def save_request_token(token):
-    repository.add_request_token(session.get("current_user", ""), token)
+    cache.set(session.get("current_user",""),token)
+
 
 
 def fetch_request_token():
-    token = repository.get_request_token(session.get("current_user", ""))
+    token = cache.get(session.get("current_user", ""))
     return token
 
 
@@ -33,15 +35,15 @@ def fetch_flickr_token():
 
 oauth.register(
     name='flickr',
-    client_id=os.environ['FLICKR_CLIENT_ID'],
-    client_secret=os.environ['FLICKR_CLIENT_SECRET'],
-    request_token_url=os.environ['FLICKR_REQUEST_TOKEN_URL'],
-    request_token_params=os.environ['FLICKR_REQUEST_TOKEN_PARAMS'],
-    access_token_url=os.environ['FLICKR_ACCESS_TOKEN_URL'],
-    access_token_params=os.environ['FLICKR_ACCESS_TOKEN_PARAMS'],
-    authorize_url=os.environ['FLICKR_AUTHORIZE_URL'],
-    api_base_url=os.environ['FLICKR_API_BASE_URL'],
-    client_kwargs=os.environ['FLICKR_CLIENT_KWARGS'],
+    client_id=app.config['FLICKR_CLIENT_ID'],
+    client_secret=app.config['FLICKR_CLIENT_SECRET'],
+    request_token_url=app.config['FLICKR_REQUEST_TOKEN_URL'],
+    request_token_params=app.config['FLICKR_REQUEST_TOKEN_PARAMS'],
+    access_token_url=app.config['FLICKR_ACCESS_TOKEN_URL'],
+    access_token_params=app.config['FLICKR_ACCESS_TOKEN_PARAMS'],
+    authorize_url=app.config['FLICKR_AUTHORIZE_URL'],
+    api_base_url=app.config['FLICKR_API_BASE_URL'],
+    client_kwargs=app.config['FLICKR_CLIENT_KWARGS'],
     save_request_token=save_request_token,
     fetch_request_token=fetch_request_token,
     fetch_token=fetch_flickr_token,
@@ -50,6 +52,7 @@ oauth.register(
 
 @app.route("/")
 def hello():
+    similar_words("church")
     return "A"
 
 
@@ -58,38 +61,35 @@ def addImage():
     user = request.json['user']
     session["current_user"] = user
     name = request.json['name']
-    payload = request.json['file']
+    originalImage = request.json['file']
     option = request.json['option']
-    originalImage = payload
-    current_image = prediction.predict(originalImage)
-    current_image = [x[1] for x in current_image if x[2] > 0.2]
+    image_labels = prediction.predict(originalImage)
+    image_labels = [x[1] for x in image_labels if x[2] > 0.2]
     t = time.time()
     if option == 'Profile':
-        images = get_photos_of_contact("me")
-        captioned_images = []
-        for image in images:
-            captioned_images.append(get_labels(image))
-        returned_images = similar_images(current_image, captioned_images)
+        cached = False
+        returned_images = []
+        for label in image_labels:
+            cached_response = cache.get(label + "+me")
+            if cached_response is not None:
+                returned_images.extend(cached_response)
+                cached = True
+        if not cached:
+            images = get_photos_of_contact("me")
+            captioned_images = []
+            for image in images:
+                captioned_images.append(get_labels(image))
+            returned_images = []
+            for label in image_labels:
+                print(similar_images(label, captioned_images, "me"))
+                returned_images.extend(similar_images(label, captioned_images, "me"))
     elif option == 'Contacts':
-        searched_images = []
-        for label in current_image:
-            searched_images = searched_images + search_photos("contacts", label)
-        captioned_images = []
-        for image in searched_images:
-            captioned_images.append(get_labels(image))
-        returned_images = similar_images(current_image, captioned_images)
+        returned_images = similar_images_with_search(image_labels, "contacts")
     else:
-        searched_images = []
-        for label in current_image:
-            searched_images = searched_images + search_photos("all", label)
-        captioned_images = []
-        print(searched_images)
-        for image in searched_images:
-            captioned_images.append(get_labels(image))
-        returned_images = similar_images(current_image, captioned_images)
-
+        returned_images = similar_images_with_search(image_labels, "all")
+    print(returned_images)
     data = {
-        "labels": current_image,
+        "labels": image_labels,
         "images": returned_images
     }
     print("Total timp: ", time.time() - t)
@@ -99,14 +99,34 @@ def addImage():
     }
 
 
+def similar_images_with_search(image_labels, mode):
+    searched_images = []
+    cached = False
+    returned_images = []
+    for label in image_labels:
+        cached_response = cache.get(label + "+" + mode)
+        if cached_response is not None:
+            returned_images.extend(cached_response)
+            cached = True
+    if not cached:
+        for label in image_labels:
+            searched_images = searched_images + search_photos(mode, label)
+        captioned_images = []
+        for image in searched_images:
+            captioned_images.append(get_labels(image))
+        returned_images = []
+        for label in image_labels:
+            returned_images.extend(similar_images(label, captioned_images, mode))
+    return returned_images
+
+
 @app.route("/login")
 def login():
     user_id = uuid.uuid4()
     user_id = str(user_id)
     session["current_user"] = user_id
     redirect_uri = "http://localhost:5000/authorize"
-    kwargs = {}
-    return oauth.flickr.authorize_redirect(redirect_uri=redirect_uri,**kwargs)
+    return oauth.flickr.authorize_redirect(redirect_uri)
 
 
 @app.route('/authorize')
@@ -141,31 +161,19 @@ def flickr_profile():
 
 
 def get_profile():
-    request_url = os.environ["FLICKR_API_BASE_URL"] + "rest?"
+    request_url = app.config["FLICKR_API_BASE_URL"] + "rest?"
     parameters = dict()
     parameters["method"] = "flickr.people.getInfo"
     parameters["nojsoncallback"] = 1
     parameters["format"] = "json"
-    parameters["api_key"] = os.environ["FLICKR_CLIENT_ID"]
+    parameters["api_key"] = app.config["FLICKR_CLIENT_ID"]
     parameters["user_id"] = repository.get_token_by_id(session["current_user"]).get("user_nsid", "")
     resp = requests.get(request_url, parameters)
     return resp.json()
 
 
-def get_contacts():
-    api_key = os.environ["FLICKR_CLIENT_ID"]
-    method = "flickr.contacts.getList"
-    response_format = "json"
-    request_url = "rest?method={}&api_key={}&format={}&nojsoncallback={}".format(method, api_key, response_format, 1)
-    response = oauth.flickr.get(request_url).json()
-    contact_list = []
-    for contact in response.get("contacts", {}).get("contact", []):
-        contact_list.append(contact.get("nsid", ""))
-    return contact_list
-
-
 def get_photos_of_contact(contact):
-    api_key = os.environ["FLICKR_CLIENT_ID"]
+    api_key = app.config["FLICKR_CLIENT_ID"]
     method = "flickr.people.getPhotos"
     response_format = "json"
     request_url = "rest?method={}&api_key={}&user_id={}&format={}&nojsoncallback={}".format(method, api_key, contact,
@@ -178,7 +186,7 @@ def get_photos_of_contact(contact):
 
 
 def search_photos(mode, text):
-    api_key = os.environ["FLICKR_CLIENT_ID"]
+    api_key = app.config["FLICKR_CLIENT_ID"]
     method = "flickr.photos.search"
     media = "photos"
     sort = "relevance"
@@ -239,18 +247,30 @@ def get_labels(image):
     return (image, labels)
 
 
-def similar_images(current_image, image_list):
-    print(current_image)
+def similar_images(label, image_list, mode):
     similar_images = set()
     for image, labels in image_list:
-        print(labels)
-        for i in range(0, len(current_image)):
-            if current_image[i] in labels:
-                similar_images.add(image)
-    return list(similar_images)
+        if label in labels:
+            similar_images.add(image)
+    similar_images = list(similar_images)
+    cache.set(label + "+" + mode, similar_images, timeout=3 * 60 * 60)
+    return similar_images
+
+
+def similar_words(label):
+    if ' ' in label:
+        label.replace(" ", "+")
+    url = "https://api.datamuse.com/words?rel_syn=" + label
+    response = requests.get(url).json()
+    similar_words = []
+    for word_structure in response:
+        similar_words.append(word_structure["word"])
+    if len(similar_words) > 3:
+        similar_words = similar_words[0:3]
+    return similar_words
 
 
 if __name__ == '__main__':
     # This is used when running locally. Gunicorn is used to run the
     # application on Google App Engine. See entrypoint in app.yaml.
-     app.run(host='127.0.0.1', port=5000)
+    app.run(host='127.0.0.1', port=5000)

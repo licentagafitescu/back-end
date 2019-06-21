@@ -4,12 +4,12 @@ from io import BytesIO
 import numpy as np
 import base64
 import tensorflow as tf
-from keras.models import load_model
+from keras.applications.nasnet import NASNetMobile
 from keras.applications.nasnet import preprocess_input, decode_predictions
 from keras.preprocessing import image
 
 global model, graph
-model = load_model("model.h5")
+model = NASNetMobile(weights="imagenet")
 graph = tf.get_default_graph()
 
 
