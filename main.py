@@ -65,6 +65,10 @@ def addImage():
     option = request.json['option']
     image_labels = prediction.predict(originalImage)
     image_labels = [x[1] for x in image_labels if x[2] > 0.2]
+    similar = []
+    for label in image_labels:
+        similar.extend(similar_words(label))
+    image_labels.extend(similar)
     t = time.time()
     if option == 'Profile':
         cached = False
@@ -88,6 +92,7 @@ def addImage():
     else:
         returned_images = similar_images_with_search(image_labels, "all")
     print(returned_images)
+    returned_images = list(set(returned_images))
     data = {
         "labels": image_labels,
         "images": returned_images
