@@ -2,11 +2,12 @@ from pony.orm import *
 
 db = Database()
 
+
 class User(db.Entity):
     user_nsid = PrimaryKey(str)
-    user_id = Required(str,nullable=False)
-    username = Required(str,nullable=False)
-    fullname = Required(str, nullable =False)
+    user_id = Required(str, nullable=False)
+    username = Required(str, nullable=False)
+    fullname = Required(str, nullable=False)
     oauth_token = Required(str, nullable=False)
     oauth_token_secret = Required(str, nullable=False)
 

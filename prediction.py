@@ -17,12 +17,12 @@ def predict(image_response):
     image_response = base64.b64decode(image_response)
     t = time.time()
     img = image.load_img(BytesIO(image_response), target_size=(224, 224))
-    x = image.img_to_array(img)
-    x = np.expand_dims(x, axis=0)
-    x = preprocess_input(x)
+    img = image.img_to_array(img)
+    img = np.expand_dims(img, axis=0)
+    img = preprocess_input(img)
 
     with graph.as_default():
-        preds = model.predict(x)
+        preds = model.predict(img)
         print(time.time() - t)
         # decode the results into a list of tuples (class, description, probability)
         # (one such list for each sample in the batch)

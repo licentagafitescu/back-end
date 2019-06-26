@@ -43,7 +43,7 @@ oauth.register(
     access_token_params=app.config['FLICKR_ACCESS_TOKEN_PARAMS'],
     authorize_url=app.config['FLICKR_AUTHORIZE_URL'],
     api_base_url=app.config['FLICKR_API_BASE_URL'],
-    client_kwargs=app.config['FLICKR_CLIENT_KWARGS'],
+    client_kwargs=None,
     save_request_token=save_request_token,
     fetch_request_token=fetch_request_token,
     fetch_token=fetch_flickr_token,
@@ -140,6 +140,9 @@ def authorize():
 
 @app.route('/profile')
 def flickr_profile():
+    id = request.args.get('id')
+    print(id)
+    session["current_user"] = id
     profile = get_profile()
     profile_info = dict()
     iconfarm = profile.get("person", {}).get("iconfarm")
